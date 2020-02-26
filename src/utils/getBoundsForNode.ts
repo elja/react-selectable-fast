@@ -8,8 +8,6 @@ export type TComputedBounds = {
   left: number
   width: number
   height: number
-  offsetWidth: number
-  offsetHeight: number
 }
 
 export function getDocumentScroll() {
@@ -43,9 +41,7 @@ export function getBoundsForNode(
   return {
     top: rect.top + documentScrollTop + scrollTop,
     left: rect.left + documentScrollLeft + scrollLeft,
-    offsetWidth: node.offsetWidth,
-    offsetHeight: node.offsetHeight,
-    width: rect.width,
-    height: rect.height
+    width: node.offsetWidth,
+    height: node.offsetHeight
   }
 }

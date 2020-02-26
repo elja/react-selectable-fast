@@ -27,7 +27,6 @@ type TMouseDownData = {
 
 type TProcessItemOptions = TSelectItemsOptions & {
   item: TSelectableItem
-  tolerance: number
   selectboxBounds: TComputedBounds
   enableDeselect: boolean
   mixedDeselect: boolean
@@ -50,7 +49,6 @@ export type TSelectableGroupProps = {
   deselectOnEsc?: boolean
   resetOnStart?: boolean
   disabled?: boolean
-  delta?: number
   allowAltClick?: boolean
   allowCtrlClick?: boolean
   allowMetaClick?: boolean
@@ -73,16 +71,19 @@ export type TSelectableGroupProps = {
   onSelectionFinish?: Function
 
   /**
+   * function that check collision between selectboxBounds and selectableBounds
+   */
+  testCollision: Function
+
+  /**
+   * function that can prepare selectBoxBounds for testCollision function
+   */
+  toCollisionBox?: Function
+
+  /**
    * The component that will represent the Selectable DOM node
    */
   component?: ReactComponentLike
-
-  /**
-   * Amount of forgiveness an item will offer to the selectbox before registering
-   * a selection, i.e. if only 1px of the item is in the selection, it shouldn't be
-   * included.
-   */
-  tolerance?: number
 
   /**
    * In some cases, it the bounding box may need fixed positioning, if your layout
@@ -95,7 +96,6 @@ export type TSelectableGroupProps = {
 class SelectableGroup extends Component<TSelectableGroupProps> {
   static defaultProps = {
     clickClassName: '',
-    tolerance: 0,
     globalMouse: false,
     ignoreList: [],
     scrollSpeed: 0.25,
@@ -103,13 +103,18 @@ class SelectableGroup extends Component<TSelectableGroupProps> {
     duringSelection: noop,
     onSelectionFinish: noop,
     onSelectionClear: noop,
+    toCollisionBox: (bounds: TComputedBounds) => {
+      return bounds
+    },
+    testCollision: () => {
+      throw new Error('not implemented')
+    },
     allowClickWithoutSelected: true,
     selectionModeClass: 'in-selection-mode',
     resetOnStart: false,
     disabled: false,
     deselectOnEsc: true,
     fixedPosition: false,
-    delta: 1,
     allowAltClick: false,
     allowCtrlClick: false,
     allowMetaClick: false,
@@ -347,13 +352,13 @@ class SelectableGroup extends Component<TSelectableGroupProps> {
 
     this.selectItems({
       ...selectboxBounds,
-      offsetWidth: selectboxBounds.offsetWidth || 1,
-      offsetHeight: selectboxBounds.offsetHeight || 1
+      width: selectboxBounds.width || 1,
+      height: selectboxBounds.height || 1
     })
   }
 
   selectItems = (selectboxBounds: TComputedBounds, options: TSelectItemsOptions = {}) => {
-    const { tolerance, enableDeselect, mixedDeselect } = this.props
+    const { enableDeselect, mixedDeselect, toCollisionBox } = this.props
 
     selectboxBounds.top += this.scrollContainer!.scrollTop
     selectboxBounds.left += this.scrollContainer!.scrollLeft
@@ -361,8 +366,7 @@ class SelectableGroup extends Component<TSelectableGroupProps> {
     for (const item of this.registry.values()) {
       this.processItem({
         item,
-        selectboxBounds,
-        tolerance: tolerance!,
+        selectboxBounds: toCollisionBox!(selectboxBounds),
         mixedDeselect: mixedDeselect!,
         enableDeselect: enableDeselect!,
         isFromClick: options && options.isFromClick
@@ -371,13 +375,13 @@ class SelectableGroup extends Component<TSelectableGroupProps> {
   }
 
   processItem(options: TProcessItemOptions) {
-    const { item, tolerance, selectboxBounds, enableDeselect, mixedDeselect, isFromClick } = options
+    const { item, selectboxBounds, enableDeselect, mixedDeselect, isFromClick } = options
 
     if (this.isInIgnoreList(item.node)) {
       return null
     }
 
-    const isCollided = doObjectsCollide(selectboxBounds, item.bounds!, tolerance, this.props.delta)
+    const isCollided = this.props.testCollision(selectboxBounds, item.bounds!)
     const { isSelecting, isSelected } = item.state
 
     if (isFromClick && isCollided) {
@@ -505,24 +509,12 @@ class SelectableGroup extends Component<TSelectableGroupProps> {
 
     if (!this.props.globalMouse && !isNodeInRoot(evt.target as any, this.selectableGroup!)) {
       const offsetData = getBoundsForNode(this.selectableGroup!)
-      const collides = doObjectsCollide(
-        {
-          top: offsetData.top,
-          left: offsetData.left,
-          width: 0,
-          height: 0,
-          offsetHeight: offsetData.offsetHeight,
-          offsetWidth: offsetData.offsetWidth
-        },
-        {
-          top: evt.pageY,
-          left: evt.pageX,
-          width: 0,
-          height: 0,
-          offsetWidth: 0,
-          offsetHeight: 0
-        }
-      )
+      const collides = doObjectsCollide(offsetData, {
+        top: evt.pageY,
+        left: evt.pageX,
+        width: 0,
+        height: 0
+      })
 
       if (!collides) {
         return
@@ -658,9 +650,7 @@ class SelectableGroup extends Component<TSelectableGroupProps> {
           top,
           left,
           width: 0,
-          height: 0,
-          offsetWidth: 0,
-          offsetHeight: 0
+          height: 0
         },
         { isFromClick: true }
       )

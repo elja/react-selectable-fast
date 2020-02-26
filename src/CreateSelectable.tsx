@@ -1,11 +1,11 @@
 import React, { Component, ComponentType } from 'react'
 import { bool } from 'prop-types'
 
-import { getBoundsForNode, TComputedBounds, TGetBoundsForNodeArgs } from './utils'
+import { TGetBoundsForNodeArgs } from './utils'
 import { TSelectableItemState } from './Selectable.types'
 import SelectableGroupContext from './Context'
 
-const createSelectable = (WrappedComponent: ComponentType<any>) =>
+const createSelectable = (getBoundsForNode: Function, WrappedComponent: ComponentType<any>) =>
   class SelectableItem extends Component<any, TSelectableItemState> {
     static contextType = SelectableGroupContext
 
@@ -24,7 +24,7 @@ const createSelectable = (WrappedComponent: ComponentType<any>) =>
 
     node: HTMLElement | null = null
 
-    bounds: TComputedBounds | null = null
+    bounds: any | null = null
 
     componentDidMount() {
       this.registerSelectable()
