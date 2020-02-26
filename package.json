@@ -35,7 +35,7 @@
     }
   },
   "bugs": {
-    "url": "https://github.com/valerybugakov/react-selectable-fast/issues"
+    "url": "https://github.com/elja/react-selectable-fast/issues"
   },
   "engines": {
     "node": ">8.0.0"
@@ -60,10 +60,7 @@
     "lib",
     "dist"
   ],
-  "homepage": "https://github.com/valerybugakov/react-selectable-fast#readme",
-  "directories": {
-    "example": "example"
-  },
+  "homepage": "https://github.com/elja/react-selectable-fast#readme",
   "peerDependencies": {
     "react": ">=16.6.0",
     "react-dom": ">=16.6.0"
